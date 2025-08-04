@@ -1,84 +1,95 @@
-import logging
-import os
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
-    ContextTypes, filters
-)
-from telegram.error import TelegramError
-from keep_alive import keep_alive
+import telebot
+from telebot import types
+import requests
 
-BOT_TOKEN = "8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI"
-REQUIRED_CHANNELS = ["@Nodi39", "@tyaf90"]
+# ✅ التوكن
+BOT_TOKEN = "8392401732:AAE9-KtZD-IqZGRRbxL_6YPBk1AiaAFNDjM"
+bot = telebot.TeleBot(BOT_TOKEN)
 
-logging.basicConfig(level=logging.INFO)
+# ✅ معرفات القنوات المطلوبة للاشتراك
+REQUIRED_CHANNELS = ["@tyaf90", "@Nodi39"]
 
-async def is_user_subscribed(bot, user_id):
+# ✅ رسالة الترحيب
+WELCOME_MESSAGE = """
+🤖 مرحبًا بك في بوت زيادة التفاعل!
+
+📌 لاستخدام البوت، يجب أولاً الاشتراك في القنوات التالية:
+- @tyaf90
+- @Nodi39
+
+✅ بعد الاشتراك، أرسل /start مجددًا.
+"""
+
+# ✅ التحقق من الاشتراك
+def is_user_subscribed(user_id):
     for channel in REQUIRED_CHANNELS:
         try:
-            member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
-            if member.status not in ["member", "administrator", "creator"]:
+            member = bot.get_chat_member(channel, user_id)
+            if member.status not in ['member', 'creator', 'administrator']:
                 return False
-        except TelegramError:
+        except:
             return False
     return True
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if await is_user_subscribed(context.bot, user_id):
-        await update.message.reply_text("مرحبًا بك! الرجاء إرسال رابط المنشور الذي تريد إرسال التفاعلات إليه.")
-        context.user_data['awaiting_post_link'] = True
-    else:
-        await update.message.reply_text(
-            "يرجى الاشتراك في القناتين أولاً لمتابعة استخدام البوت:\n\n"
-            "📢 1. @Nodi39\n"
-            "📢 2. @tyaf90\n\n"
-            "بعد الاشتراك، أرسل /start مرة أخرى."
-        )
+# ✅ عند استقبال /start
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    user_id = message.from_user.id
+    if not is_user_subscribed(user_id):
+        bot.send_message(user_id, WELCOME_MESSAGE)
+        return
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if context.user_data.get('awaiting_post_link'):
-        context.user_data['post_link'] = text
-        context.user_data['awaiting_post_link'] = False
-        context.user_data['awaiting_reactions'] = True
-        await update.message.reply_text(
-            "رائع! الآن أرسل عدد وأشكال التفاعلات التي تريدها، مفصولة بفاصلة.\n"
-            "مثال: ❤️, 😂, 🔥, 👍"
-        )
-    elif context.user_data.get('awaiting_reactions'):
-        reactions = [r.strip() for r in text.split(',') if r.strip()]
-        if reactions:
-            post_link = context.user_data.get('post_link')
-            await update.message.reply_text(
-                f"✅ تم استلام طلبك.\n"
-                f"📎 المنشور: {post_link}\n"
-                f"🎯 التفاعلات المطلوبة: {', '.join(reactions)}\n\n"
-                f"سيتم إرسال التفاعلات لاحقًا بسبب الضغط على البوت، شكرًا لصبرك!"
-            )
-            context.user_data.clear()
-        else:
-            await update.message.reply_text("يرجى إرسال التفاعلات مفصولة بفاصلة، مثل: ❤️, 😂, 🔥, 👍")
-    else:
-        await update.message.reply_text("اكتب /start للبدء.")
+    msg = (
+        "✅ شكراً لاشتراكك في القنوات!\n\n"
+        "📌 الآن، قم بإضافة البوت كـ *أدمن في قناتك*.\n"
+        "ثم أرسل رابط المنشور الذي تريد زيادة التفاعل عليه."
+    )
+    bot.send_message(user_id, msg, parse_mode="Markdown")
 
-async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ البوت يعمل الآن.")
+    bot.register_next_step_handler(message, get_post_link)
 
-def main():
-    keep_alive()
+# ✅ بعد إرسال رابط المنشور
+def get_post_link(message):
+    post_link = message.text.strip()
+    msg = "📊 أرسل الآن عدد التفاعلات المطلوبة (مثلاً: 100):"
+    bot.send_message(message.chat.id, msg)
+    bot.register_next_step_handler(message, get_reaction_count, post_link)
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+# ✅ بعد إرسال العدد
+def get_reaction_count(message, post_link):
+    try:
+        count = int(message.text.strip())
+    except ValueError:
+        bot.send_message(message.chat.id, "❌ الرجاء إدخال رقم صحيح.")
+        return
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ping", ping))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    buttons = ["❤️", "👍", "🔥", "😂", "💯"]
+    markup.add(*buttons)
 
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=8080,
-        webhook_url="https://rshq-bot.onrender.com/" + BOT_TOKEN
+    bot.send_message(message.chat.id, "🎭 اختر شكل التفاعل:", reply_markup=markup)
+    bot.register_next_step_handler(message, confirm_request, post_link, count)
+
+# ✅ بعد اختيار شكل التفاعل
+def confirm_request(message, post_link, count):
+    emoji = message.text.strip()
+    bot.send_message(
+        message.chat.id,
+        f"""✅ تم استلام الطلب بنجاح!
+
+📌 الرابط: {post_link}
+🔢 العدد المطلوب: {count}
+🎭 التفاعل: {emoji}
+
+⌛ سيتم تنفيذ التفاعل لاحقًا بسبب الضغط على البوت.
+شكراً لاستخدامك البوت ❤️
+""",
+        reply_markup=types.ReplyKeyboardRemove()
     )
 
-if __name__ == "__main__":
-    main()
+# ✅ تشغيل السيرفر للـ UptimeRobot
+import keep_alive
+keep_alive.keep_alive()
+
+# ✅ بدء تشغيل البوت
+bot.infinity_polling()

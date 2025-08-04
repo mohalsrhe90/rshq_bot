@@ -1,12 +1,13 @@
 import logging
 import os
-import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram.error import TelegramError
 from keep_alive import keep_alive
 
-BOT_TOKEN = "8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI"
+# ⚠️ الآن يقرأ التوكن من متغير البيئة
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
 REQUIRED_CHANNELS = ["@Nodi39", "@tyaf90"]
 
 logging.basicConfig(level=logging.INFO)
@@ -24,14 +25,18 @@ async def is_user_subscribed(bot, user_id):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if await is_user_subscribed(context.bot, user_id):
-        await update.message.reply_text("مرحبًا بك! الرجاء إرسال **رابط المنشور** الذي تريد إرسال التفاعلات إليه.")
+        await update.message.reply_text(
+            "👋 مرحبًا بك في بوت التفاعلات!\n\n"
+            "📎 فقط أرسل **رابط المنشور** الذي تريد إرسال التفاعلات إليه.\n"
+            "⚠️ الحد الأقصى للتفاعلات هو 50 في اليوم."
+        )
         context.user_data['awaiting_post_link'] = True
     else:
         await update.message.reply_text(
-            "يرجى الاشتراك في القناتين أولاً لمتابعة استخدام البوت:\n\n"
+            "🚫 يرجى الاشتراك في القناتين أولاً لمتابعة استخدام البوت:\n\n"
             "📢 1. @Nodi39\n"
             "📢 2. @tyaf90\n\n"
-            "بعد الاشتراك، أرسل /start مرة أخرى."
+            "✅ بعد الاشتراك، أرسل /start مرة أخرى."
         )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -41,9 +46,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['awaiting_post_link'] = False
         context.user_data['awaiting_reactions'] = True
         await update.message.reply_text(
-            "رائع! الآن أرسل عدد وأشكال التفاعلات التي تريدها، مفصولة بفاصلة.\n"
-            "مثال: ❤️, 😂, 🔥, 👍\n"
-            "⚠️ الحد الأقصى للتفاعلات في اليوم هو 50 تفاعل."
+            "🎯 رائع! الآن أرسل التفاعلات التي تريدها، مفصولة بفواصل.\n"
+            "مثال: ❤️, 😂, 🔥, 👍"
         )
     elif context.user_data.get('awaiting_reactions'):
         reactions = [r.strip() for r in text.split(',') if r.strip()]
@@ -53,36 +57,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ تم استلام طلبك.\n"
                 f"📎 المنشور: {post_link}\n"
                 f"🎯 التفاعلات المطلوبة: {', '.join(reactions)}\n\n"
-                f"سيتم إرسال التفاعلات لاحقًا بسبب الضغط على البوت، شكرًا لصبرك!"
+                f"📌 سيتم تنفيذ التفاعلات قريبًا، شكرًا لصبرك!"
             )
             context.user_data.clear()
         else:
-            await update.message.reply_text("يرجى إرسال التفاعلات مفصولة بفاصلة، مثل: ❤️, 😂, 🔥, 👍")
+            await update.message.reply_text("❗ يرجى إرسال التفاعلات بشكل صحيح، مثال: ❤️, 😂, 🔥, 👍")
     else:
-        await update.message.reply_text("اكتب /start للبدء.")
+        await update.message.reply_text("🔁 اكتب /start للبدء.")
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ البوت يعمل الآن.")
 
 def main():
     keep_alive()
+    if not BOT_TOKEN:
+        raise ValueError("❌ BOT_TOKEN غير موجود في متغيرات البيئة")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    webhook_url = "https://rshq-bot.onrender.com"
-
-    # إعداد Webhook
-    asyncio.run(app.bot.set_webhook(f"{webhook_url}/{BOT_TOKEN}"))
-
-    # تشغيل التطبيق باستخدام Webhook
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=8080,
-        webhook_url=f"{webhook_url}/{BOT_TOKEN}"
-    )
+    app.run_polling()
 
 if __name__ == "__main__":
     main()

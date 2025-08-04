@@ -1,12 +1,12 @@
 import logging
 import os
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram.error import TelegramError
 from keep_alive import keep_alive
 
 BOT_TOKEN = "8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI"
-
 REQUIRED_CHANNELS = ["@Nodi39", "@tyaf90"]
 
 logging.basicConfig(level=logging.INFO)
@@ -42,7 +42,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['awaiting_reactions'] = True
         await update.message.reply_text(
             "رائع! الآن أرسل عدد وأشكال التفاعلات التي تريدها، مفصولة بفاصلة.\n"
-            "مثال: ❤️, 😂, 🔥, 👍"
+            "مثال: ❤️, 😂, 🔥, 👍\n"
+            "⚠️ الحد الأقصى للتفاعلات في اليوم هو 50 تفاعل."
         )
     elif context.user_data.get('awaiting_reactions'):
         reactions = [r.strip() for r in text.split(',') if r.strip()]
@@ -66,10 +67,22 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     keep_alive()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+
+    webhook_url = "https://rshq-bot.onrender.com"
+
+    # إعداد Webhook
+    asyncio.run(app.bot.set_webhook(f"{webhook_url}/{BOT_TOKEN}"))
+
+    # تشغيل التطبيق باستخدام Webhook
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=8080,
+        webhook_url=f"{webhook_url}/{BOT_TOKEN}"
+    )
 
 if __name__ == "__main__":
     main()

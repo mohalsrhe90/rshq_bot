@@ -8,7 +8,7 @@ from telegram.ext import (
 from telegram.error import TelegramError
 from keep_alive import keep_alive
 
-BOT_TOKEN = "توكن البوت تبعك هون"
+BOT_TOKEN = "8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI" 
 REQUIRED_CHANNELS = ["@Nodi39", "@tyaf90"]
 
 logging.basicConfig(level=logging.INFO)

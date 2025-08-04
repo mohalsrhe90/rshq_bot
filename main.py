@@ -8,7 +8,7 @@ from telegram.ext import (
 from telegram.error import TelegramError
 from keep_alive import keep_alive
 
-BOT_TOKEN = "8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI" 
+BOT_TOKEN = "8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI"
 REQUIRED_CHANNELS = ["@Nodi39", "@tyaf90"]
 
 logging.basicConfig(level=logging.INFO)
@@ -68,9 +68,7 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     keep_alive()
 
-    app = ApplicationBuilder().token(BOT_TOKEN).webhook_url(
-        f"https://rshq-bot.onrender.com/{BOT_TOKEN}"
-    ).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
@@ -79,7 +77,7 @@ def main():
     app.run_webhook(
         listen="0.0.0.0",
         port=8080,
-        webhook_url=f"https://rshq-bot.onrender.com/{BOT_TOKEN}"
+        webhook_url="https://rshq-bot.onrender.com/8419874313:AAH3csdSkAlYytsV0pEYpvzUwGabWGsryGI"
     )
 
 if __name__ == "__main__":

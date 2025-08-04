@@ -2,11 +2,11 @@ import telebot
 from telebot import types
 import requests
 
-# ✅ التوكن
-BOT_TOKEN = "8392401732:AAE9-KtZD-IqZGRRbxL_6YPBk1AiaAFNDjM"
+# ✅ التوكن الجديد
+BOT_TOKEN = "8394615201:AAG4PwMFa8omJxR29aKylXuKXihmofi1HkY"
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ✅ معرفات القنوات المطلوبة للاشتراك
+# ✅ القنوات المطلوبة للاشتراك
 REQUIRED_CHANNELS = ["@tyaf90", "@Nodi39"]
 
 # ✅ رسالة الترحيب
@@ -31,7 +31,7 @@ def is_user_subscribed(user_id):
             return False
     return True
 
-# ✅ عند استقبال /start
+# ✅ عند إرسال /start
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     user_id = message.from_user.id
@@ -48,14 +48,14 @@ def handle_start(message):
 
     bot.register_next_step_handler(message, get_post_link)
 
-# ✅ بعد إرسال رابط المنشور
+# ✅ استلام رابط المنشور
 def get_post_link(message):
     post_link = message.text.strip()
     msg = "📊 أرسل الآن عدد التفاعلات المطلوبة (مثلاً: 100):"
     bot.send_message(message.chat.id, msg)
     bot.register_next_step_handler(message, get_reaction_count, post_link)
 
-# ✅ بعد إرسال العدد
+# ✅ استلام عدد التفاعلات
 def get_reaction_count(message, post_link):
     try:
         count = int(message.text.strip())
@@ -70,7 +70,7 @@ def get_reaction_count(message, post_link):
     bot.send_message(message.chat.id, "🎭 اختر شكل التفاعل:", reply_markup=markup)
     bot.register_next_step_handler(message, confirm_request, post_link, count)
 
-# ✅ بعد اختيار شكل التفاعل
+# ✅ تأكيد الطلب
 def confirm_request(message, post_link, count):
     emoji = message.text.strip()
     bot.send_message(
@@ -87,9 +87,10 @@ def confirm_request(message, post_link, count):
         reply_markup=types.ReplyKeyboardRemove()
     )
 
-# ✅ تشغيل السيرفر للـ UptimeRobot
+# ✅ تشغيل البوت للسيرفر
 import keep_alive
 keep_alive.keep_alive()
 
-# ✅ بدء تشغيل البوت
+# ✅ polling
+bot.remove_webhook()
 bot.infinity_polling()
